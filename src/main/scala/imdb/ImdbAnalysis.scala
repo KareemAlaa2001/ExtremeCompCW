@@ -33,7 +33,12 @@ object ImdbAnalysis {
   */
 
   def task1(list: List[TitleBasics]): List[(Float, Int, Int, String)] = {
-    ???
+    //  starting with the title basics list, need to sort out a bunch of transformations to get to the desired shape
+    //  first need to groupby genre - NOTE: need to account for none genres, single genres and multiple genres.
+    //  first filter out none values
+    //  then flatmap such that each titlebasic object is mapped to a list of titlebasic objects, each with a different genre. could do a fold? 
+    val noneGenresAndRuntimesRemoved = list.filter(_.genres != None).filter(_.runtimeMinutes != None)// .flatMap(titleBasic => )
+    null
   }
 
   /*
@@ -42,27 +47,27 @@ object ImdbAnalysis {
   */
 
   def task2(l1: List[TitleBasics], l2: List[TitleRatings]): List[String] = {
-    ???
+    null
   }
 
   def task3(l1: List[TitleBasics], l2: List[TitleRatings]): List[(Int, String, String)] = {
-    ???
+    null
   }
 
   // Hint: There could be an input list that you do not really need in your implementation.
   def task4(l1: List[TitleBasics], l2: List[TitleCrew], l3: List[NameBasics]): List[(String, Int)] = {
-    ???
+    null
   }
 
   def main(args: Array[String]) {
     val durations = timed("Task 1", task1(titleBasicsList))
-    val titles = timed("Task 2", task2(titleBasicsList, titleRatingsList))
-    val topRated = timed("Task 3", task3(titleBasicsList, titleRatingsList))
-    val crews = timed("Task 4", task4(titleBasicsList, titleCrewList, nameBasicsList))
+    // val titles = timed("Task 2", task2(titleBasicsList, titleRatingsList))
+    // val topRated = timed("Task 3", task3(titleBasicsList, titleRatingsList))
+    // val crews = timed("Task 4", task4(titleBasicsList, titleCrewList, nameBasicsList))
     println(durations)
-    println(titles)
-    println(topRated)
-    println(crews)
+    // println(titles)
+    // println(topRated)
+    // println(crews)
     println(timing)
   }
 
