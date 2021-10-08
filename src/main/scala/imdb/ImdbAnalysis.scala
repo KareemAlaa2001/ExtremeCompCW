@@ -2,6 +2,7 @@ package imdb
 
 import scala.io.Source
 
+
 case class TitleBasics(tconst: String, titleType: Option[String], primaryTitle: Option[String],
                       originalTitle: Option[String], isAdult: Int, startYear: Option[Int], endYear: Option[Int],
                       runtimeMinutes: Option[Int], genres: Option[List[String]])
@@ -12,19 +13,46 @@ case class NameBasics(nconst: String, primaryName: Option[String], birthYear: Op
 
 object ImdbAnalysis {
 
+  def extractStringListFromPath[K](path: String, parseFunc: String => K): List[K] = {
+    val bufferedSource = Source.fromFile(path)
+    val list = bufferedSource.getLines().toList.map(line => parseFunc(line))
+    bufferedSource.close()
+    list
+  }
+
   // Hint: use a combination of `ImdbData.titleBasicsPath` and `ImdbData.parseTitleBasics`
-  val titleBasicsList: List[TitleBasics] = Source.fromFile(ImdbData.titleBasicsPath).getLines().map(ImdbData.parseTitleBasics _)
+  val titleBasicsList: List[TitleBasics] = extractStringListFromPath(ImdbData.titleBasicsPath, ImdbData.parseTitleBasics)
 
   // Hint: use a combination of `ImdbData.titleRatingsPath` and `ImdbData.parseTitleRatings`
-  val titleRatingsList: List[TitleRatings] =  Source.fromFile(ImdbData.titleRatingsPath).getLines().map(ImdbData.parseTitleRatings _)
+  val titleRatingsList: List[TitleRatings] =  extractStringListFromPath(ImdbData.titleRatingsPath, ImdbData.parseTitleRatings)
 
 
   // Hint: use a combination of `ImdbData.titleCrewPath` and `ImdbData.parseTitleCrew`
-  val titleCrewList: List[TitleCrew] = Source.fromFile(ImdbData.titleCrewPath).getLines().map(ImdbData.parseTitleCrew _)
+  val titleCrewList: List[TitleCrew] = extractStringListFromPath(ImdbData.titleCrewPath, ImdbData.parseTitleCrew)
 
 
   // Hint: use a combination of `ImdbData.nameBasicsPath` and `ImdbData.parseNameBasics`
-  val nameBasicsList: List[NameBasics] = Source.fromFile(ImdbData.nameBasicsPath).getLines().map(ImdbData.parseNameBasics _)
+  val nameBasicsList: List[NameBasics] = extractStringListFromPath(ImdbData.nameBasicsPath, ImdbData.parseNameBasics)
+
+  def constructSingleGenreTitleBasicsObject(oldTitleBasics: TitleBasics, genre: String): TitleBasics = {
+    oldTitleBasics.copy(genres=Some(List(genre)))
+  }
+
+  def constructTitleBasicsListForAllGenresFromSingleObject(titleBasics: TitleBasics): List[TitleBasics] = {
+    assert(titleBasics.genres.isDefined)
+    val genresList: List[String] = titleBasics.genres.get
+    genresList.foldRight(List[TitleBasics]())((genre, acc) => titleBasics.copy(genres=Some(List(genre))) :: acc)
+  }
+
+  def average(s: List[Int]): Float = {
+    s.foldLeft((0f, 1f)) { case ((avg, id), curr) => (avg + (curr - avg)/id, id + 1) }._1
+  }
+
+  def getAverageMinMaxRuntimesForTitleBasicsListAndGenre(titleBasicsList: List[TitleBasics], genre: String): (Float, Int, Int, String) = {
+    val runtimeMinutes: List[Int] = titleBasicsList.map(_.runtimeMinutes.get)
+    val averageRuntime: Float = runtimeMinutes.sum.toFloat / runtimeMinutes.length.toFloat
+    (averageRuntime, runtimeMinutes.min, runtimeMinutes.max, genre)
+  }
 
   /*
     Calculate the average, minimum, and maximum runtime duration for all titles per movie genre.
@@ -34,11 +62,14 @@ object ImdbAnalysis {
 
   def task1(list: List[TitleBasics]): List[(Float, Int, Int, String)] = {
     //  starting with the title basics list, need to sort out a bunch of transformations to get to the desired shape
-    //  first need to groupby genre - NOTE: need to account for none genres, single genres and multiple genres.
     //  first filter out none values
-    //  then flatmap such that each titlebasic object is mapped to a list of titlebasic objects, each with a different genre. could do a fold? 
-    val noneGenresAndRuntimesRemoved = list.filter(_.genres != None).filter(_.runtimeMinutes != None)// .flatMap(titleBasic => )
-    null
+    //  then flatmap such that each titlebasic object is mapped to a list of titlebasic objects, each with a different genre. could do a fold?
+    //  then groupby genre - NOTE: need to account for none genres, single genres and multiple genres.
+    //  then for each group, run by
+    val noneGenresAndRuntimesRemoved = list.filter(_.genres.isDefined).filter(_.runtimeMinutes.isDefined)
+    val flatMapped: List[TitleBasics] = noneGenresAndRuntimesRemoved.flatMap(titleBasics => constructTitleBasicsListForAllGenresFromSingleObject(titleBasics))
+    val groupedByGenre: Map[String, List[TitleBasics]] = flatMapped.groupBy[String](_.genres.get.head)
+    groupedByGenre.map{case (genre, titleBasicsList) => getAverageMinMaxRuntimesForTitleBasicsListAndGenre(titleBasicsList, genre)}.toList
   }
 
   /*
