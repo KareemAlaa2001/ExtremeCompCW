@@ -71,7 +71,7 @@ object ImdbAnalysis {
 
   def task2(l1: List[TitleBasics], l2: List[TitleRatings]): List[String] = {
 
-    val titleRatingsTconstMap: Map[String, TitleRatings] = l2.foldLeft(Map[String, TitleRatings]())((acc, titleRatings) => acc + (titleRatings.tconst -> titleRatings))
+    val titleRatingsTconstMap: Map[String, TitleRatings] = l2.map(tr => tr.tconst -> tr).toMap
 
     l1.filter( titleBasics => {
       titleBasics.primaryTitle.isDefined && titleBasics.startYear.isDefined && titleBasics.titleType.isDefined && titleBasics.startYear.get >= 1990 && titleBasics.startYear.get <= 2018 && titleBasics.titleType.get == "movie"  && titleRatingsTconstMap.contains(titleBasics.tconst) && titleRatingsTconstMap(titleBasics.tconst).averageRating >= 7.5 && titleRatingsTconstMap(titleBasics.tconst).numVotes >= 500000
@@ -91,14 +91,6 @@ object ImdbAnalysis {
           genre:String
           title:String
    */
-  /*
-    Class defs (for readability):
-          case class TitleBasics(tconst: String, titleType: Option[String], primaryTitle: Option[String],
-                      originalTitle: Option[String], isAdult: Int, startYear: Option[Int], endYear: Option[Int],
-                      runtimeMinutes: Option[Int], genres: Option[List[String]])
-          case class TitleRatings(tconst: String, averageRating: Float, numVotes: Int)
-   */
-
   def getDecade(titleBasics: TitleBasics): Int = (titleBasics.startYear.get / 10) % 10
 
   def isEligibleTask3(tb: TitleBasics, titleRatingsTconstMap :  Map[String, TitleRatings]): Boolean = {
@@ -107,14 +99,14 @@ object ImdbAnalysis {
 
   def getTopRatedTitle(titleBasicsList: List[TitleBasics], titleRatingsTconstMap :  Map[String, TitleRatings]): String = {
     titleBasicsList.foldRight[(String, Float)](("",0.0f))((titleBasics, accPair) => {
+      val currTitleRatings: TitleRatings = titleRatingsTconstMap(titleBasics.tconst)
+      if (currTitleRatings.averageRating > accPair._2) {
 
-      if (titleRatingsTconstMap(titleBasics.tconst).averageRating > accPair._2) {
+        (titleBasics.primaryTitle.get, currTitleRatings.averageRating)
 
-        (titleBasics.primaryTitle.get, titleRatingsTconstMap(titleBasics.tconst).averageRating)
+      } else if (currTitleRatings.averageRating == accPair._2 && titleBasics.primaryTitle.get < accPair._1) {
 
-      } else if (titleRatingsTconstMap(titleBasics.tconst).averageRating == accPair._2 && titleBasics.primaryTitle.get < accPair._1) {
-
-        (titleBasics.primaryTitle.get, titleRatingsTconstMap(titleBasics.tconst).averageRating)
+        (titleBasics.primaryTitle.get, currTitleRatings.averageRating)
 
       } else accPair
     })._1
@@ -125,7 +117,8 @@ object ImdbAnalysis {
     //  relevant fields: tb.startYear, tb.primaryTitle, tb.titleType, tb.genres, tr.averageRating
     //  filter by fields defined, start year between 1900 and 1999, and movie titletype
     //  will need to group by genre AND group by decade?
-    val titleRatingsTconstMap : Map[String, TitleRatings] = l2.foldLeft(Map[String, TitleRatings]())((acc, titleRatings) => acc + (titleRatings.tconst -> titleRatings))
+
+    val titleRatingsTconstMap : Map[String, TitleRatings] = l2.map(tr => tr.tconst -> tr).toMap
 
     val titleBasicsFiltered : List[TitleBasics] = l1.filter(isEligibleTask3(_, titleRatingsTconstMap))
 
@@ -142,20 +135,63 @@ object ImdbAnalysis {
     sortedNestedStructure.flatMap(decadeListPair => (List.fill(decadeListPair._2.length)(decadeListPair._1), decadeListPair._2.map(genreTbListPair => (genreTbListPair._1, getTopRatedTitle(genreTbListPair._2, titleRatingsTconstMap)))).zipped.toList).map{case (decade, (genre, title)) => (decade, genre, title)}
   }
 
+  /*
+    Class defs (for readability):
+          case class TitleBasics(tconst: String, titleType: Option[String], primaryTitle: Option[String],
+                      originalTitle: Option[String], isAdult: Int, startYear: Option[Int], endYear: Option[Int],
+                      runtimeMinutes: Option[Int], genres: Option[List[String]])
+
+          case class TitleRatings(tconst: String, averageRating: Float, numVotes: Int)
+
+          case class TitleCrew(tconst: String, directors: Option[List[String]], writers: Option[List[String]])
+
+          case class NameBasics(nconst: String, primaryName: Option[String],
+                      birthYear: Option[Int], deathYear: Option[Int],
+                      primaryProfession: Option[List[String]], knownForTitles: Option[List[String]])
+   */
+  /*
+    In this task we are interested in all the crew names (primaryName) for whom there are at least two known-
+    for films released since the year 2010 up to and including the current year (2021).
+    You need to return the crew name and the number of such films.
+    return type: List[(String, Int)]
+        crew name:String
+        film count:Int
+   */
+
   // Hint: There could be an input list that you do not really need in your implementation.
   def task4(l1: List[TitleBasics], l2: List[TitleCrew], l3: List[NameBasics]): List[(String, Int)] = {
-    null
+    //  first also need to filter for relevant fields. Relevant fields: NameBasics.primaryName, NameBasics.knownForTitles, TitleBasics.startYear
+
+    //  TODO need to figure out which list I'm using as my base.
+//    val nameBasicsNconstMap: Map[String, NameBasics] = l3.foldLeft(Map[String, NameBasics]())((acc, nameBasics) => acc + (nameBasics.nconst -> nameBasics))
+
+    //  Could use NameBasics as a base, go through each entry's known for films, then check for their startYear in titleBasics. Would do a tconstmap for TitleBasics in this case
+    //  can get lengths of result of filtering by start date in tconstmap
+
+    val titleBasicsTconstMap: Map[String, TitleBasics] = l1.map(tb => tb.tconst -> tb).toMap
+
+    val wantedNameBasics: List[NameBasics] = l3.filter(nb => nb.primaryName.isDefined && nb.knownForTitles.isDefined && nb.knownForTitles.get.count(tconst => {
+      val optionTitleBasics: Option[TitleBasics] = titleBasicsTconstMap.get(tconst)
+      if (optionTitleBasics.isDefined) {
+        val titleBasics: TitleBasics = optionTitleBasics.get
+        titleBasics.startYear.isDefined && titleBasics.startYear.get >= 2010 && titleBasics.startYear.get <= 2021
+      } else false
+    }) >= 2)
+
+    wantedNameBasics.map(nb => (nb.primaryName.get, nb.knownForTitles.get.length))
   }
 
   def main(args: Array[String]) {
-//    val durations = timed("Task 1", task1(titleBasicsList))
-//    val titles = timed("Task 2", task2(titleBasicsList, titleRatingsList))
-     val topRated = timed("Task 3", task3(titleBasicsList, titleRatingsList))
-    // val crews = timed("Task 4", task4(titleBasicsList, titleCrewList, nameBasicsList))
-//    println(durations)
-//    println(titles)
+    val durations = timed("Task 1", task1(titleBasicsList))
+    val titles = timed("Task 2", task2(titleBasicsList, titleRatingsList))
+    val topRated = timed("Task 3", task3(titleBasicsList, titleRatingsList))
+    val crews = timed("Task 4", task4(titleBasicsList, titleCrewList, nameBasicsList))
+    println(durations)
+    println(titles)
     println(topRated)
-    // println(crews)
+    println(crews)
+
+    val tconstMapMethod2 = timed("Map then toMap tconst construction", titleBasicsList.map(tb => tb.tconst -> tb).toMap)
     println(timing)
   }
 
