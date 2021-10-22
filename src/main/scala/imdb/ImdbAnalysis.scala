@@ -133,7 +133,7 @@ object ImdbAnalysis {
 
     val wantedNameBasics: List[NameBasics] = l3.filter(nb => nb.primaryName.isDefined && nb.knownForTitles.isDefined && nb.knownForTitles.get.count(tconst => relevantTconsts.contains(tconst)) >= 2)
 
-    wantedNameBasics.map(nb => (nb.primaryName.get, nb.knownForTitles.get.length))
+    wantedNameBasics.map(nb => (nb.primaryName.get, nb.knownForTitles.get.count(relevantTconsts.contains)))
   }
 
   def main(args: Array[String]) {
