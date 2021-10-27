@@ -1,6 +1,8 @@
 package imdb
 
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
+import java.nio.file.{Files, Paths}
+import java.util.stream.{Collectors, Stream}
 
 case class TitleBasics(tconst: String, titleType: Option[String], primaryTitle: Option[String],
                       originalTitle: Option[String], isAdult: Int, startYear: Option[Int], endYear: Option[Int],
@@ -13,8 +15,8 @@ case class NameBasics(nconst: String, primaryName: Option[String], birthYear: Op
 object ImdbAnalysis {
 
   def extractStringListFromPath[K](path: String, parseFunc: String => K): List[K] = {
-    val bufferedSource = Source.fromFile(path)
-    val list = bufferedSource.getLines().toList.map(line => parseFunc(line))
+    val bufferedSource: BufferedSource = Source.fromFile(path)
+    val list: List[K] = bufferedSource.getLines().map(line => parseFunc(line)).toList
     bufferedSource.close()
     list
   }
@@ -45,7 +47,6 @@ object ImdbAnalysis {
   */
 
   def task1(list: List[TitleBasics]): List[(Float, Int, Int, String)] = {
-
     val noneGenresAndRuntimesRemoved = list.filter(entry => entry.genres.isDefined && entry.runtimeMinutes.isDefined)
     val flatMapped: List[TitleBasics] = noneGenresAndRuntimesRemoved.flatMap(titleBasics => titleBasics.genres.get.map(genre => titleBasics.copy(genres = Some(List(genre)))))
     val groupedByGenre: Map[String, List[TitleBasics]] = flatMapped.groupBy[String](_.genres.get.head)
@@ -58,7 +59,6 @@ object ImdbAnalysis {
   */
 
   def task2(l1: List[TitleBasics], l2: List[TitleRatings]): List[String] = {
-
     val titleRatingsTconstMap: Map[String, TitleRatings] = l2.filter(tr => tr.averageRating >= 7.5 && tr.numVotes >= 500000).map(tr => tr.tconst -> tr).toMap
 
     l1.filter( titleBasics => {
@@ -102,7 +102,6 @@ object ImdbAnalysis {
   }
 
   def task3(l1: List[TitleBasics], l2: List[TitleRatings]): List[(Int, String, String)] = {
-
     val titleRatingsTconstMap : Map[String, TitleRatings] = l2.map(tr => tr.tconst -> tr).toMap
 
     val titleBasicsFiltered : List[TitleBasics] = l1.filter(isEligibleTask3(_, titleRatingsTconstMap))
@@ -128,7 +127,6 @@ object ImdbAnalysis {
 
   // Hint: There could be an input list that you do not really need in your implementation.
   def task4(l1: List[TitleBasics], l2: List[TitleCrew], l3: List[NameBasics]): List[(String, Int)] = {
-
     val relevantTconsts: Set[String] = l1.filter(tb => tb.startYear.isDefined && tb.startYear.get >= 2010 && tb.startYear.get <= 2021).map(_.tconst).toSet
 
     val wantedNameBasics: List[NameBasics] = l3.filter(nb => nb.primaryName.isDefined && nb.knownForTitles.isDefined && nb.knownForTitles.get.count(tconst => relevantTconsts.contains(tconst)) >= 2)
