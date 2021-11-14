@@ -21,7 +21,7 @@ case class NameBasics(nconst: String, primaryName: Option[String], birthYear: Op
 object ImdbAnalysis {
 
   val conf: SparkConf = new SparkConf()
-                          .setMaster("local[50]")
+                          .setMaster("local[*]")
                           .setAppName("hw2")
   val sc: SparkContext = SparkContext.getOrCreate(conf)
 
@@ -68,7 +68,7 @@ object ImdbAnalysis {
     For the titles use the primaryTitle field and account only for entries whose titleType is ‘movie’.
   */
   def task2(l1: RDD[TitleBasics], l2: RDD[TitleRatings]): RDD[String] = {
-    val filteredTitleRatings: RDD[(String, TitleRatings)] = l2.filter(tr => tr.averageRating >= 7.5 && tr.numVotes >= 500000).map(tr => tr.tconst -> tr)
+    val filteredTitleRatings: RDD[(String, String)] = l2.filter(tr => tr.averageRating >= 7.5 && tr.numVotes >= 500000).map(tr => tr.tconst -> "")
 
     val primaryTitles: RDD[(String, String)] = l1.filter( titleBasics => {
       titleBasics.primaryTitle.isDefined && titleBasics.startYear.isDefined && titleBasics.titleType.isDefined && titleBasics.startYear.get >= 1990 && titleBasics.startYear.get <= 2018 && titleBasics.titleType.get == "movie"
@@ -137,14 +137,14 @@ object ImdbAnalysis {
   // Hint: There could be an input RDD that you do not really need in your implementation.
   def task4(l1: RDD[TitleBasics], l2: RDD[TitleCrew], l3: RDD[NameBasics]): RDD[(String, Int)] = {
 
-    val relevantTconsts : RDD[(String, TitleBasics)] = l1.filter(tb => tb.startYear.isDefined && tb.startYear.get >= 2010 && tb.startYear.get <= 2021).map(tb => tb.tconst -> tb)
+    val filteredTconsts : RDD[(String, Int)] = l1.filter(tb => tb.startYear.isDefined && tb.startYear.get >= 2010 && tb.startYear.get <= 2021).map(tb => tb.tconst -> 1)
 
-    val tconstPrimaryNames : RDD[(String, Iterable[String])] = l3.filter(nb => nb.primaryName.isDefined && nb.knownForTitles.isDefined && nb.knownForTitles.get.size >= 2).flatMap(nb => nb.knownForTitles.get.map((_, nb.primaryName.get))).groupByKey()
+    val tconstCastMembers : RDD[(String, (String, String))] = l3.filter(nb => nb.primaryName.isDefined && nb.knownForTitles.isDefined && nb.knownForTitles.get.size >= 2).flatMap(nb => nb.knownForTitles.get.map((_, (nb.nconst, nb.primaryName.get))))
 
-    val relevantContributions : RDD[(String, (Iterable[String], TitleBasics))]= tconstPrimaryNames.join(relevantTconsts)
+    val relevantContributions : RDD[(String, ((String, String), Int))] = tconstCastMembers.join(filteredTconsts)
 
-    val counts : RDD[(String, Int)] = relevantContributions.flatMap(_._2._1.map((_,1))).reduceByKey(_ + _)
-    counts.filter(_._2 >= 2)
+    relevantContributions.map(_._2).reduceByKey(_+_).filter(_._2 >= 2).map(tup => tup._1._2 -> tup._2)
+
   }
 
   def main(args: Array[String]) {
