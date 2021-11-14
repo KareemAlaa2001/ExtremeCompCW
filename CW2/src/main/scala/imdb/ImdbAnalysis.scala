@@ -1,12 +1,8 @@
 package imdb
 
-import org.apache.spark
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
-
-import scala.io.{BufferedSource, Source}
 
 case class TitleBasics(tconst: String, titleType: Option[String], primaryTitle: Option[String],
                       originalTitle: Option[String], isAdult: Int, startYear: Option[Int], endYear: Option[Int],
@@ -68,7 +64,7 @@ object ImdbAnalysis {
     For the titles use the primaryTitle field and account only for entries whose titleType is ‘movie’.
   */
   def task2(l1: RDD[TitleBasics], l2: RDD[TitleRatings]): RDD[String] = {
-    val filteredTitleRatings: RDD[(String, String)] = l2.filter(tr => tr.averageRating >= 7.5 && tr.numVotes >= 500000).map(tr => tr.tconst -> "")
+    val filteredTitleRatings: RDD[(String, TitleRatings)] = l2.filter(tr => tr.averageRating >= 7.5 && tr.numVotes >= 500000).map(tr => tr.tconst -> tr)
 
     val primaryTitles: RDD[(String, String)] = l1.filter( titleBasics => {
       titleBasics.primaryTitle.isDefined && titleBasics.startYear.isDefined && titleBasics.titleType.isDefined && titleBasics.startYear.get >= 1990 && titleBasics.startYear.get <= 2018 && titleBasics.titleType.get == "movie"
